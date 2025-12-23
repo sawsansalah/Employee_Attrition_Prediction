@@ -1,6 +1,4 @@
 [core]
-    remote = emp-pred
-['remote "employee-prediction"']
-    url = s3://employee-attrition-prediction
-['remote "emp-pred"']
+    remote = remote-storage
+['remote "remote-storage"']
     url = s3://employee-attrition-prediction
