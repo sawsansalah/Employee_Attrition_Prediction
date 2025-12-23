@@ -1,9 +1,12 @@
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
-import joblib
+from __future__ import annotations
 import os
+import argparse
+import math
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
 import mlflow
 import mlflow.sklearn
 
@@ -46,21 +49,32 @@ def main():
     # Train and log with MLflow
     with mlflow.start_run(run_name=args.run) as run:
         # Log simple params
- 
+        mlflow.log_param("n_estimators", args.n_estimators)
+        mlflow.log_param("max_depth", args.max_depth)
+        mlflow.log_param("test_size", args.test_size)
+        mlflow.log_param("random_state", args.random_state)
         mlflow.log_param("train_rows", len(X_train))
         mlflow.log_param("test_rows", len(X_test))
 
-# Train model
-model = LogisticRegression()
-model.fit(X_train, y_train)
+        # Train model
+        model = RandomForestRegressor(
+            n_estimators=args.n_estimators,
+            max_depth=args.max_depth,
+            random_state=args.random_state,
+        )
+        model.fit(X_train, y_train)
 
-# Evaluate
-predictions = model.predict(X_test)
-accuracy = accuracy_score(y_test, predictions)
-print(f"Employee attrition model accuracy: {accuracy}")
+        # Predict + metrics
+        preds = model.predict(X_test)
+        mse = mean_squared_error(y_test, preds)          # MSE is stable across sklearn versions
+        rmse = float(math.sqrt(mse))                     # avoid `squared=` kw argument issues
+        r2 = float(r2_score(y_test, preds))
 
-# Save model
-os.makedirs("models", exist_ok=True)
-joblib.dump(model, "models/attrition_model.pkl")
+        # Log metrics
+        mlflow.log_metric("mse", float(mse))
+        mlflow.log_metric("rmse", rmse)
+        mlflow.log_metric("r2", r2)
+
 if __name__ == "__main__":
     main()
+
